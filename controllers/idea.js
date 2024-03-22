@@ -71,5 +71,42 @@ const updateIdea = (req, res) => {
 };
 
 
+const getIdeas = (req, res) => {
+    if (!req.body) {
+        return res.status(400).json({ message: 'Invalid request, request body is missing' });
+    }
+    const projectID = req.body;
 
-module.exports = {createIdea, checkProjectMembership, updateIdea};
+    const query = 'SELECT * FROM ideas WHERE projectID = ?';
+    connection.query(query, [projectID], (err, results) => {
+        if (err) {
+            console.error('Error retrieving ideas', err);
+            return res.status(500).json({ error: 'Internal server error' });
+        }
+
+        return res.status(200).json({ ideas: results });
+    });
+};
+
+const deleteIdea = (req, res) => {
+    if (!req.body) {
+        return res.status(400).json({ message: 'Invalid request, request body is missing' });
+    }    
+    const ID = req.body;
+
+    const query = 'DELETE FROM ideas WHERE ID = ?';
+    connection.query(query, [ID], (err, results) => {
+        if (err) {
+            console.error('Error deleting idea', err);
+            return res.status(500).json({ error: 'Internal server error' });
+        }
+
+        if (results.affectedRows === 0) {
+            return res.status(404).json({ message: 'Idea not found' });
+        }
+
+        return res.status(200).json({ message: 'Idea deleted successfully' });
+    });
+};
+
+module.exports = {createIdea, checkProjectMembership, updateIdea,getIdeas,deleteIdea};

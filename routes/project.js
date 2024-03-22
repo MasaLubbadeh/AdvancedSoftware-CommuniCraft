@@ -8,7 +8,7 @@ const { get_project,  delete_project, add_project,
     // updateProject, authenticateTokenHandler,checkProjectMembership
      }  = require('../controllers/project');
 
-const {createIdea, checkProjectMembership, updateIdea} =require('../controllers/idea');
+const {createIdea, checkProjectMembership, updateIdea,getIdeas,deleteIdea} =require('../controllers/idea');
 
 
   
@@ -22,8 +22,10 @@ router.delete('/deletePro', delete_project )
 router.get('/getProject', get_project);
 
 ///////////////////////////////masa's///////////////////////////////
-router.post('/createIdea',createIdea)
-router.put('/projects/ideas', checkProjectMembership, updateIdea);
+router.post('/ideas/NewIdea',createIdea)
+router.put('/ideas/ModifyingIdeas', checkProjectMembership, updateIdea);
+router.get('/ideas/DisplayingAllIdeas',getIdeas);
+router.delete('/ideas/RemovingIdea',deleteIdea);
 
 ///////////////////////////////leen's //////////////////////////
 
