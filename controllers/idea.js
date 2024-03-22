@@ -35,7 +35,7 @@ const createIdea = (req, res) => {
 const checkProjectMembership = (req, res, next) => {
     //const projectId = req.params.projectId; 
     const projectID = 1;
-    const userID = req.user.ID; // 'ID' should match the property in the JWT payload
+    const userID = req.user.userID; // 'ID' should match the property in the JWT payload
 
     const query = 'SELECT * FROM user_project WHERE projectID = ? AND userID = ?';
     connection.query(query, [projectID, userID], (err, results) => {
@@ -72,6 +72,4 @@ const updateIdea = (req, res) => {
 
 
 
-module.exports = {createIdea,
-    checkProjectMembership,
-    updateIdea};
+module.exports = {createIdea, checkProjectMembership, updateIdea};

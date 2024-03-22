@@ -4,13 +4,28 @@ const router=express.Router()
 const { connection } = require('../connection');
 router.use(express.json());
 
-const {addTask, getProjectTasks} = require('../controllers/task')
+const {addTask,assignTask,updateTaskStatus, getProjectTasks} = require('../controllers/task')
 
 router.post('/addTask', addTask);
-router.get('/:id/allTasks',getProjectTasks);
+//router.post('/project/:projectID/tasks', addTask);
 
-module.exports = {
+router.put('/assignTask', assignTask);
+//router.put('/project/:projectID/tasks/:taskID', addTask);
+
+
+router.put('/:userID/updateTaskStatus',updateTaskStatus);
+//router.put('/project/:projectID/tasks/:taskID', addTask);
+
+
+router.get('/:id/allTasks',getProjectTasks);
+//router.get('/project/:projectID/tasks/list', getProjectTasks);
+
+//router.delete('/:id/allTasks',deleteTask);
+
+
+/*module.exports = {
     router,
     mysql,
     connection,
-  };
+  };*/
+  module.exports=router;

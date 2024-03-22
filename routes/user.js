@@ -1,10 +1,10 @@
 const express = require("express");
 const { connection } = require("../connection");
-const {    ViewUserProfile,
+const { ViewUserProfile,
   UpdateUserInfo,
   SearchBySkill,
   deleteUser,
-  createUser}= require('../controllers/people')
+  createUser}= require('../controllers/user')
 const router= express.Router();
 router.use(express.json());
 
