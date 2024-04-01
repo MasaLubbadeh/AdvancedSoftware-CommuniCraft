@@ -1,16 +1,15 @@
 
-// services/emailService.js
 const nodemailer = require('nodemailer');
 
 // Create transporter (configure with your SMTP details)
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'leenbatta0@gmail.com',
-        pass: 'qfgw jbnb lgup aelo'
+        user: 'communicrafts@gmail.com',
+        pass: 'uuxo lwmf tzdh ytdu'
     },
     tls: {
-        rejectUnauthorized: false // Disable SSL verification
+        rejectUnauthorized: false 
     }
 });
 
@@ -19,7 +18,7 @@ function sendEmail(recipientEmail, project) {
     return new Promise((resolve, reject) => {
         // Define email message
         const mailOptions = {
-            from: 'leenbatta0@gmail.com',
+            from: 'communicrafts@gmail.com',
             to: recipientEmail,
             subject: `Check out this project: ${project.projectName}`,
             text: `Project Name: ${project.projectName}\nDescription: ${project.description}`

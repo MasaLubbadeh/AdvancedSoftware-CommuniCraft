@@ -3,50 +3,48 @@ const express = require('express');
 const router=express.Router()
 
 const { connection } = require('../connection');
-const { get_project,  delete_project, add_project,
-    finishedProjects, projectSharing, getAllprojects
-    // updateProject, authenticateTokenHandler,checkProjectMembership
+const { get_project,  delete_project, add_project,addToFav,
+    finishedProjects, projectSharing, getAllprojects,updateProject,
+      authenticateTokenHandler,checkProjectMembership,
+      rateProject,  commentOnProject, checkTokenPresence, deleteComment
      }  = require('../controllers/project');
 
-const {createIdea, checkProjectMembership, updateIdea,getIdeas,deleteIdea} =require('../controllers/idea');
-
-
-  
+const {createIdea,
+  // updateIdea,
+  getIdeas,deleteIdea
+  } =require('../controllers/idea');
 router.use(express.json());
 
-////////////////////////////Raya's//////////////////////////////////
-router.post('/addpro', add_project);
+router.post('/newProject', add_project);
 
-router.delete('/deletePro', delete_project )
+router.delete('/:projectID',authenticateTokenHandler, delete_project )
 
-router.get('/getProject', get_project);
+router.get('', get_project);
 
-///////////////////////////////masa's///////////////////////////////
-router.post('/ideas/NewIdea',createIdea)
-router.put('/ideas/ModifyingIdeas', checkProjectMembership, updateIdea);
-router.get('/ideas/DisplayingAllIdeas',getIdeas);
-router.delete('/ideas/RemovingIdea',deleteIdea);
+router.post('/:projectID/fav',authenticateTokenHandler,addToFav);
 
-///////////////////////////////leen's //////////////////////////
+//////////////ideas
+router.post('/:projectID/createIdea',createIdea);
 
+router.get('/:projectID/ideas/list',getIdeas);
 
+router.delete('/:projectID/ideas/:ideaID',deleteIdea);
+
+///////////////////////////
 //get all projects
-router.get('/projects', getAllprojects );
+router.get('/list', getAllprojects );
 
 //update project details :
-//router.put('/:projectId',updateProjectRoute);
-//router.put('/:projectId', authenticateTokenHandler, checkProjectMembership, updateProject);
+router.put('/:projectID', authenticateTokenHandler, checkProjectMembership, updateProject);
 
 // Get all finished projects
-     router.get('/projects/finished', finishedProjects);
+router.get('/finished', finishedProjects);
 
 //share finished projects
-     router.post('/projects/share',projectSharing);
+router.post('/share',authenticateTokenHandler,projectSharing);
 
-/*module.exports = {
-    router,
-    mysql,
-    connection,
-  };*/
+router.post('/:projectId/ratings',checkTokenPresence, authenticateTokenHandler,rateProject);
+router.post('/:projectId/comments',checkTokenPresence, authenticateTokenHandler,commentOnProject);
+router.delete('/:projectId/comments/:commentId', authenticateTokenHandler, deleteComment);
 
   module.exports=router;

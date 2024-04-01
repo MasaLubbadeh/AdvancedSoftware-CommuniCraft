@@ -2,6 +2,7 @@ const express = require("express");
 const {connection} = require("../connection");
 const jwt = require('jsonwebtoken');
 const {generateToken} = require("../auth/auth");
+const {hashPasswordSHA1}= require("./user.js");
 
  const app = express();
 app.use(express.json());
@@ -14,10 +15,10 @@ const login= (req, res) => {
      
   
       const { userName , password } = req.body; ////body from postman
+      const hashedPassword = hashPasswordSHA1(password);// to compare it to encrypted pass in the database
   
-      // Find the user in the database
       const query = 'SELECT * FROM user WHERE userName = ? AND password = ?';
-          connection.query(query, [userName, password], (err, results) => {
+          connection.query(query, [userName, hashedPassword], (err, results) => {
         if (err) {
           console.error('Error executing query', err);
           res.status(500).json({ error: 'Internal server error' });
@@ -33,20 +34,12 @@ const login= (req, res) => {
             skill: results[0].skill,
         });
   
-       // return res.send(token);
-          //const user = results[0];
           res.status(200).json({ token :token,message: 'Login successful', user: results[0] });
       } else {
-          // User not found or password incorrect~, return error response
+          // User not found or password incorrect, return error response
           res.status(401).json({ message: 'Invalid username or password' });
       }
-    
-     
-    
   
       });
     }
-
-
-    
     module.exports=login;

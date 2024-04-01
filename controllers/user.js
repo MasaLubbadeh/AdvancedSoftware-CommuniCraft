@@ -1,13 +1,33 @@
 const {connection} = require("../connection");
   session=require('../routes/login')
- //session = require('express-session');
+ const crypto = require('crypto');
+
+// Function to hash pass using SHA-1 
+const hashPasswordSHA1 = (password) => {
+    const sha1Hash = crypto.createHash('sha1');
+    sha1Hash.update(password);
+    return sha1Hash.digest('hex');
+};
+
 
 const ViewUserProfile=(req, res)=>{
-    if (!req.body) {
-      res.status(400).json({ message: 'Invalid request, request body is missing' });
-      return;
-    }
-    const { userID } = req.body;
+    const  userID  = req.params.userID;
+    const Admin=req.user.ID;
+    // Check if the user making the request is an admin
+    const adminQuery = 'SELECT admin FROM user WHERE userID = ?';
+    connection.query(adminQuery, [Admin], (adminError, adminResult) => {
+        if (adminError) {
+            console.error('Error checking user admin status:', adminError);
+            return res.status(500).json({ error: 'Internal server error' });
+        }
+        const isAdmin = adminResult[0].admin === 1;
+
+        if (!isAdmin) {
+            return res.status(403).json({ error: 'Unauthorized access: Only admin users can share projects' });
+        }
+
+      });
+
     const query = 'SELECT userName,email,skill FROM user WHERE userID=?';
     connection.query(query, [userID], (err, results) => {
       if (err) {
@@ -22,7 +42,6 @@ const ViewUserProfile=(req, res)=>{
   
       }
       else {
-        // User not found or password incorrect~, return error response
         res.status(401).json({ message: 'No Such User' });
       }
   
@@ -30,17 +49,15 @@ const ViewUserProfile=(req, res)=>{
   }
 
 const UpdateUserInfo=(req, res) => {
+  
+  const userID= req.user.ID;
+
     if (!req.body) {
       res.status(400).json({ message: 'Invalid request, request body is missing' });
       return;
     }
-     session = req.session;
-    const SuserId = session.userID; 
-    let { userID, userName, email, password } = req.body;
-    if (SuserId !== userID) {
-      res.status(401).json({ message: 'Unauthorized: You cant modify another user' });
-      return;
-    }
+    
+    let {userName, email, password ,skill} = req.body;
     let query = 'SELECT * FROM user WHERE userID=?';
     connection.query(query, [userID], (err, results) => {
       if (err) {
@@ -58,8 +75,11 @@ const UpdateUserInfo=(req, res) => {
       if (password == 'NoChange') {
         password = results[0].password;
       }
-      const query = "UPDATE user SET userName = ?, email = ?, password = ? WHERE userID = ?";
-      connection.query(query, [userName, email, password, userID], (err, results1) => {
+      if (skill == 'NoChange') {
+        skill = results[0].skill;
+      }
+      const query = "UPDATE user SET userName = ?, email = ?, password = ?,skill = ? WHERE userID = ?";
+      connection.query(query, [userName, email, password,skill ,userID], (err, results1) => {
         if (err) {
           console.error('Error executing query', err);
           res.status(500).json({ error: 'Internal server error' });
@@ -119,11 +139,9 @@ const SearchBySkill=(req, res)=>{
     });
   }
  const deleteUser=(req, res) => {
-    if (!req.body) {
-      res.status(400).json({ message: 'Invalid request, request body is missing' });
-      return;
-    }
-    const { userID } = req.body;
+
+    const userID= req.user.ID;
+
     const query = 'DELETE FROM user WHERE userID=?';
     connection.query(query, [userID], (err, results) => {
       if (err) {
@@ -152,41 +170,63 @@ const SearchBySkill=(req, res)=>{
         return;
     }
 
-    let { userID, userName, email, password } = req.body;
+    let { userName, email, password ,skill} = req.body;
 
     //  Check if required fields are present
-    if (!userID || !userName || !email || !password) {
+    if ( !userName || !email || !password || !skill) {
         res.status(400).json({ message: 'Missing required fields' });
         return;
     }
+    const hashedPasswordSHA1 = hashPasswordSHA1(password);
+
 
     
-    const query = 'SELECT * FROM user WHERE userID = ?';
-    connection.query(query, [userID], (err, results) => {
-        if (err) {
-            console.error('Error executing query', err);
-            res.status(500).json({ error: 'Internal server error' });
-            return;
-        }
-         //  Check if userID already exists
-        if (results.length > 0) {
-            res.status(400).json({ message: 'User with this ID already exists' });
-            return;
-        }
-
-        // If the userID is unique, proceed to create the user
-        const createUserQuery = 'INSERT INTO user (userID, userName, email, password) VALUES (?, ?, ?, ?)';
-        connection.query(createUserQuery, [userID, userName, email, password], (createErr, createResult) => {
+        const createUserQuery = 'INSERT INTO user (userName, email, password, skill) VALUES ( ?, ?, ?, ?)';
+        connection.query(createUserQuery, [ userName, email, hashedPasswordSHA1, skill], (createErr, createResult) => {
             if (createErr) {
                 console.error('Error creating user', createErr);
                 res.status(500).json({ error: 'Internal server error' });
                 return;
             }
 
-            // Respond with success message
-            res.status(200).json({ message: 'User created successfully', user: { userID, userName, email, password } });
+            res.status(200).json({ message: 'User created successfully', user: {  userName, email, password ,skill} });
         });
-    });
+};
+
+const ViewCurrentUserProfile = (req, res) => {
+
+  const userID = req.user.ID;
+  const userProfileQuery = 'SELECT userName, email, skill FROM user WHERE userID=?';
+  const unreadNotificationsQuery = 'SELECT COUNT(*) AS unreadCount FROM invitations WHERE recipient_id=? AND isRead=1';
+
+  connection.query(userProfileQuery, [userID], (err, userResults) => {
+      if (err) {
+          console.error('Error executing user profile query', err);
+          return res.status(500).json({ error: 'Internal server error' });
+      }
+
+      if (userResults.length > 0) {
+          const user = userResults[0];
+
+          // Check for unread notifications
+          connection.query(unreadNotificationsQuery, [userID], (err, notificationResults) => {
+              if (err) {
+                  console.error('Error executing unread notifications query', err);
+                  return res.status(500).json({ error: 'Internal server error' });
+              }
+
+              const unreadCount = notificationResults.length > 0 ? notificationResults[0].unreadCount : 0;
+
+              res.status(200).json({
+                  message: 'User Profile',
+                  user: user,
+                  unreadNotifications: unreadCount
+              });
+          });
+      } else {
+          res.status(401).json({ message: 'No Such User' });
+      }
+  });
 };
 
 module.exports={
@@ -194,5 +234,7 @@ module.exports={
     UpdateUserInfo,
     SearchBySkill,
     deleteUser,
-    createUser
+    createUser,
+    ViewCurrentUserProfile,
+    hashPasswordSHA1
 }

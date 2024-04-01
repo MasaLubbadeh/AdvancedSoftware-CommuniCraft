@@ -4,28 +4,18 @@ const router=express.Router()
 const { connection } = require('../connection');
 router.use(express.json());
 
-const {addTask,assignTask,updateTaskStatus, getProjectTasks} = require('../controllers/task')
+const {addTask,assignTask,updateTaskStatus,deleteTask, getProjectTasks} = require('../controllers/task')
 
-router.post('/addTask', addTask);
-//router.post('/project/:projectID/tasks', addTask);
+const { authenticateTokenHandler,checkProjectMembership }  = require('../controllers/project');
 
-router.put('/assignTask', assignTask);
-//router.put('/project/:projectID/tasks/:taskID', addTask);
+router.get('/project/:projectID/task/list',authenticateTokenHandler,checkProjectMembership,getProjectTasks);
 
+router.post('/project/:projectID/task/newTask',authenticateTokenHandler, checkProjectMembership, addTask);
 
-router.put('/:userID/updateTaskStatus',updateTaskStatus);
-//router.put('/project/:projectID/tasks/:taskID', addTask);
+router.put('/project/:projectID/task/:taskID/taskManager', authenticateTokenHandler, checkProjectMembership,assignTask);
 
+router.put('/project/:projectID/task/:taskID/taskStatus',authenticateTokenHandler, checkProjectMembership, updateTaskStatus);
 
-router.get('/:id/allTasks',getProjectTasks);
-//router.get('/project/:projectID/tasks/list', getProjectTasks);
+router.delete('/project/:projectID/task/:taskID',authenticateTokenHandler, checkProjectMembership, deleteTask);
 
-//router.delete('/:id/allTasks',deleteTask);
-
-
-/*module.exports = {
-    router,
-    mysql,
-    connection,
-  };*/
-  module.exports=router;
+module.exports=router;

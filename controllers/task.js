@@ -2,11 +2,12 @@ const mysql = require('mysql');
 const { connection } = require('../connection');
 
 const addTask = async (req, res) => {
-    const { taskTitle, description, projectName } = req.body; 
+    const { taskTitle, description} = req.body; 
+    const projectID= req.params.projectID;
 
     try {
-        const projectID = await getProjectID(projectName);
-        if (!projectID) {
+        const result = await checkProjectID(projectID);
+        if (!result) {
             return res.status(404).json({ error: 'project not found' });
         }
 
@@ -27,15 +28,17 @@ const addTask = async (req, res) => {
 }
 
 const assignTask = async (req, res) => {
-    const { taskTitle, projectName, userName } = req.body; 
+    const { userName } = req.body; 
+    const projectID= req.params.projectID;
+    const taskID= req.params.taskID;
+
     try {
         const userID = await getUserID(userName);
         if (!userID) {
             return res.status(404).json({ error: 'user not found' });
         }
-
-        const projectID = await getProjectID(projectName);
-        if (!projectID) {
+        const result = await checkProjectID(projectID);
+        if (!result) {
             return res.status(404).json({ error: 'project not found' });
         }
 
@@ -43,15 +46,15 @@ const assignTask = async (req, res) => {
         if (!userProjectExists) {
             return res.status(403).json({ error: 'user is not part of this project' });
         }
-        const taskID = await getTaskID(taskTitle);
-        if (!taskID) {
-            return res.status(404).json({ error: 'task not found' });
+       
+        const result1 = await checkTaskID(taskID);
+        if (!result1) {
+            return res.status(404).json({ error: 'project not found' });
         }
 
         const taskAssignResult = await new Promise((resolve, reject) => {
-            console.log('hii');
             const status= 'In Progress';
-            connection.query('UPDATE task SET userID=?, status=? WHERE projectID=? AND taskTitle=?', [userID, status, projectID, taskTitle], (err, result) => {
+            connection.query('UPDATE task SET userID=?, status=? WHERE projectID=? AND taskID=?', [userID, status, projectID, taskID], (err, result) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -59,6 +62,7 @@ const assignTask = async (req, res) => {
                 }
             });
         });
+        console.log(`task ${taskID} assigned successfully`);
         res.status(201).json({ message: 'task assigned successfully' });
     } catch (error) {
         console.error('Error:', error);
@@ -67,25 +71,22 @@ const assignTask = async (req, res) => {
 }
 
 const updateTaskStatus = async (req, res) => { 
-    const { taskTitle, projectName, status } = req.body; 
+    const { status } = req.body; 
+    const projectID= req.params.projectID;
+    const taskID= req.params.taskID;
+
     try {
-        const projectID = await getProjectID(projectName);
-        if (!projectID) {
+        const result = await checkProjectID(projectID);
+        if (!result) {
             return res.status(404).json({ error: 'project not found' });
         }
-
-      /*  const userProjectExists = await checkUserProject(userID, projectID);
-        if (!userProjectExists) {
-            return res.status(403).json({ error: 'user is not part of this project' });
-        }*/
-        const taskID = await getTaskID(taskTitle);
-        if (!taskID) {
+        const result1 = await checkTaskID(taskID);
+        if (!result1) {
             return res.status(404).json({ error: 'task not found' });
         }
 
         const taskAssignResult = await new Promise((resolve, reject) => {
-            console.log('hii');
-            connection.query('UPDATE task SET status=? WHERE projectID=? AND taskTitle=?', [status, projectID,taskTitle], (err, result) => {
+            connection.query('UPDATE task SET status=? WHERE projectID=? AND taskID=?', [status, projectID,taskID], (err, result) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -98,6 +99,37 @@ const updateTaskStatus = async (req, res) => {
         console.error('Error:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
+}
+const deleteTask = async (req, res) => { 
+    const projectID= req.params.projectID;
+    const taskID= req.params.taskID;
+
+    try {
+         const result = await checkProjectID(projectID);
+        if (!result) {
+            return res.status(404).json({ error: 'project not found' });
+        }
+        const result1 = await checkTaskID(taskID);
+        if (!result1) {
+            return res.status(404).json({ error: 'task not found' });
+         }
+         const taskAssignResult = await new Promise((resolve, reject) => {
+            connection.query('DELETE FROM task WHERE taskID = ? AND projectID=? ', [taskID,projectID], (err, result) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(result);
+                 } });
+                 res.status(200).json({ message: `task with ID ${taskID} deleted successfully` });
+            });
+             
+            
+        }
+            
+        catch (error) {
+                console.error('Error:', error);
+                res.status(500).json({ error: 'Internal Server Error' });
+            }
 }
 
 
@@ -113,9 +145,20 @@ function getUserID(userName) {
     });
 }
 
-function getProjectID(projectName) {
+function checkProjectID(projectID) {
     return new Promise((resolve, reject) => {
-        connection.query('SELECT projectID FROM project WHERE projectName = ?', [projectName], (err, result) => {
+        connection.query('SELECT * FROM project WHERE projectID = ?', [projectID], (err, result) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(result.length > 0 ? result[0].projectID : null);
+            }
+        });
+    });
+}
+function checkTaskID(taskID) {
+    return new Promise((resolve, reject) => {
+        connection.query('SELECT * FROM task WHERE taskID = ?', [taskID], (err, result) => {
             if (err) {
                 reject(err);
             } else {
@@ -138,44 +181,35 @@ function checkUserProject(userID, projectID) {
 }
 
 const getProjectTasks = async (req, res) => {
-    const projectID = req.params.id;
+    const projectID = req.params.projectID;
 
-   
-        connection.query('SELECT task.taskTitle, task.description, user.userName FROM task JOIN user ON task.userID = user.userID WHERE task.projectID = ?', [projectID], (err, result) => {
+    try {
+        const query = 'SELECT task.taskTitle, task.description, task.status, user.userName FROM task LEFT JOIN user ON task.userID = user.userID WHERE task.projectID = ?';
+        connection.query(query, [projectID], (err, result) => {
             if (err) {
-                console.error(err);
+                console.error('Error retrieving tasks:', err);
                 res.status(500).json({ error: 'An error occurred while retrieving tasks' });
                 return;
             }
 
             if (result.length === 0) {
-                res.status(404).json({ error: 'There are no tasks to this project' });
+                console.log('No tasks found for projectID:', projectID);
+                res.status(404).json({ error: `There are no tasks for project ${projectID}` });
                 return;
             }
 
             const tasksData = result.map(task => ({
                 taskTitle: task.taskTitle,
                 description: task.description,
-                userName: task.userName
+                status: task.status,
+                userName: (task.userName || 'Not-Assigned') 
             }));
-        
             res.status(200).json(tasksData);
-
         });
-       
-       
-   
+    } catch (error) {
+        console.error('error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
 }
 
-function getTaskID(taskTitle) {
-    return new Promise((resolve, reject) => {
-        connection.query('SELECT taskID FROM task WHERE taskTitle = ?', [taskTitle], (err, result) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(result.length > 0 ? result[0].taskID : null);
-            }
-        });
-    });
-}
-module.exports= {addTask,assignTask,updateTaskStatus, getUserID, getProjectTasks}
+module.exports= {addTask,assignTask,updateTaskStatus,deleteTask, getUserID, getProjectTasks, checkProjectID}

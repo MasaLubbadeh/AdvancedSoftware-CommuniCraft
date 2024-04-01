@@ -4,20 +4,23 @@ const { ViewUserProfile,
   UpdateUserInfo,
   SearchBySkill,
   deleteUser,
-  createUser}= require('../controllers/user')
+  createUser,
+  ViewCurrentUserProfile }= require('../controllers/user')
+
+  const {  authenticateTokenHandler }  = require('../auth/auth');
 const router= express.Router();
 router.use(express.json());
 
-router.delete('/RemoveByID', deleteUser);
+router.delete('/DeleteAccount', authenticateTokenHandler,deleteUser);
 
-router.put('/updateUserInfo',UpdateUserInfo );
+router.put('/updateUserInfo',authenticateTokenHandler, UpdateUserInfo );
 
-router.get('/SearchBySkill',SearchBySkill);
+router.get('/BySkill',SearchBySkill);
 
-router.get('/UserProfile',ViewUserProfile);
+router.get('/:userID/adminPrevillage',authenticateTokenHandler,ViewUserProfile);
 
-router.get('/UserProfile',ViewUserProfile);
+router.get('/Profile',authenticateTokenHandler,ViewCurrentUserProfile);
 
-router.post('/createUser',createUser);
+router.post('/newUser',createUser);
 
 module.exports=router;
